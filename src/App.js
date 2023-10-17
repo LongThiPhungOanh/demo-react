@@ -1,29 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {Field, Form, Formik} from "formik";
 
 function App() {
-  const [data, setData] = useState(null);
-  const [newProduct, setNewProduct] = useState({
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [totalPage, setTotalPage] = useState(0);
+    const  [data, setData] = useState(null);
+    const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
     quantity: ''
   });
   const [isEditing, setIsEditing] = useState(false);
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+  const [list, setList] = useState(true);
+  // useEffect(() => {
+  //   fetchData();
+  // },[]);
   const fetchData = () => {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
     axios.get('http://localhost:8080/api/products')
         .then(response => {
-          setData(response.data);
+            setTotalPage(parseInt((response.data.length / itemsPerPage) + 1))
+            console.log(totalPage)
+            setData(response.data.slice(startIndex, endIndex));
         })
         .catch(error => {
           alert('An error occurred');
         });
   }
+    useEffect(() => {
+        fetchData();
+    }, [currentPage, itemsPerPage]);
 
-  const handleInputChange = (e) => {
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+    }
+
+
+    const handleInputChange = (e) => {
     const fieldName = e.target.name;
     const fieldValue = e.target.value;
     setNewProduct(prevState => {
@@ -33,10 +49,13 @@ function App() {
       };
     });
   }
-
-
+  const backToList = () => {
+    setList(true)
+      setIsEditing(false)
+  }
   const handleCreateClick = () => {
-    setIsEditing(true);
+      setList(false)
+    setIsEditing(true)
     setNewProduct({
       name: '',
       price: '',
@@ -49,6 +68,7 @@ function App() {
         .then(response => {
           alert('Product created successfully');
           setIsEditing(false);
+          setList(true)
           fetchData();
         })
         .catch(error => {
@@ -57,6 +77,7 @@ function App() {
   }
 
   const handleEditClick = (item) => {
+      setList(false)
     setIsEditing(true);
     setNewProduct(item);
   }
@@ -66,6 +87,7 @@ function App() {
         .then(response => {
           alert('Product updated successfully');
           setIsEditing(false);
+          setList(true)
           fetchData();
         })
         .catch(error => {
@@ -98,6 +120,7 @@ function App() {
 
   return (
       <>
+          {list && (
         <div>
             <div className="search-box">
                 <div className="container text-center">
@@ -132,9 +155,40 @@ function App() {
             ))}
             </tbody>
           </table>
+            <div style={{ textAlign: 'center', marginTop: '20px'}}>
+            <button className="btn btn-outline-primary"  style={{ borderRadius: '15px', color: 'black' }}
+              onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1 || !data}>Previous</button>
+                <span style={{fontSize: '16px'}}>{currentPage} / {totalPage}</span>
+            <button className="btn btn-outline-primary" style={{ borderRadius: '15px', color: 'black' }}
+               onClick={() => handlePageChange(currentPage + 1)} disabled={!data || data.length < itemsPerPage}>Next</button>
         </div>
+        </div>
+          )}
         {/*form create and update*/}
         {isEditing && (
+            //Formik
+         //    <div style={{width: "500px", margin: 'auto'}}>
+         //        <h2 style={{ textAlign: 'center', marginTop: '10px' }}>{newProduct.id ? 'Edit Product' : 'Create Product'}</h2>
+         // <Formik initialValues={newProduct} onSubmit={newProduct.id ? handleUpdateProduct : handleCreateProduct}>
+         //     <Form>
+         //         <div className="mb-3">
+         //             <label className="form-label">Name</label>
+         //             <Field className="form-control" name={'name'}></Field>
+         //         </div>
+         //         <div className="mb-3">
+         //             <label className="form-label">Price</label>
+         //             <Field className="form-control" name={'price'}></Field>
+         //         </div>
+         //         <div className="mb-3">
+         //             <label className="form-label">Quantity</label>
+         //             <Field className="form-control" name={'quantity'}></Field>
+         //         </div>
+         //     </Form>
+         // </Formik>
+         //    </div>
+
+
+            //Form thường
             <div style={{width: "500px", margin: 'auto'}}>
               <h2 style={{ textAlign: 'center', marginTop: '10px' }}>{newProduct.id ? 'Edit Product' : 'Create Product'}</h2>
                 <div className="mb-3">
@@ -156,7 +210,8 @@ function App() {
                   "btn btn-warning" : "btn btn-primary"} onClick={newProduct.id ?
                   handleUpdateProduct : handleCreateProduct}>
                 {newProduct.id ? 'Update' : 'Create'}
-              </button>
+              </button> <br/>
+                <button style={{marginTop: '40px'}} className="btn btn-info" onClick={backToList}>Back to list</button>
             </div>
         )}
       </>
